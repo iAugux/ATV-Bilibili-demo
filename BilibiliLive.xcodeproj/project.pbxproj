@@ -39,7 +39,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		F9B57350260F5F7400771ED5 /* BilibiliLive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BilibiliLive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9B57350260F5F7400771ED5 /* Bilibili.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bilibili.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -92,7 +92,7 @@
 		F9B57351260F5F7400771ED5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F9B57350260F5F7400771ED5 /* BilibiliLive.app */,
+				F9B57350260F5F7400771ED5 /* Bilibili.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -135,7 +135,7 @@
 				2806E51D2C1593A000164C10 /* LookinServer */,
 			);
 			productName = BilibiliLive;
-			productReference = F9B57350260F5F7400771ED5 /* BilibiliLive.app */;
+			productReference = F9B57350260F5F7400771ED5 /* Bilibili.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -363,7 +363,6 @@
 					"$(PROJECT_DIR)/BilibiliLive/Vendor/DanmakuKit",
 				);
 				INFOPLIST_FILE = "BilibiliLive/Supporting Files/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Bilibili;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -373,7 +372,7 @@
 					"$(PROJECT_DIR)/BilibiliLive/Vendor",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.etan.tv.BilibiliLive;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Bilibili;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
@@ -395,7 +394,6 @@
 					"$(PROJECT_DIR)/BilibiliLive/Vendor/DanmakuKit",
 				);
 				INFOPLIST_FILE = "BilibiliLive/Supporting Files/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Bilibili;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -405,7 +403,7 @@
 					"$(PROJECT_DIR)/BilibiliLive/Vendor",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.etan.tv.BilibiliLive;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Bilibili;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 16.0;

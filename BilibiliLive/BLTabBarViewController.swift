@@ -50,7 +50,7 @@ class BLTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         let liveVC = LiveViewController()
         liveVC.tabBarItem.title = "直播"
         vcs.append(liveVC)
-        
+
         let persionVC = PersonalViewController.create()
         persionVC.extendedLayoutIncludesOpaqueBars = true
         persionVC.tabBarItem.title = "我的"
