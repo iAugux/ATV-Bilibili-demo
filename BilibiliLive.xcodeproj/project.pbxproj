@@ -363,6 +363,7 @@
 					"$(PROJECT_DIR)/BilibiliLive/Vendor/DanmakuKit",
 				);
 				INFOPLIST_FILE = "BilibiliLive/Supporting Files/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Bilibili;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -394,6 +395,7 @@
 					"$(PROJECT_DIR)/BilibiliLive/Vendor/DanmakuKit",
 				);
 				INFOPLIST_FILE = "BilibiliLive/Supporting Files/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Bilibili;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
