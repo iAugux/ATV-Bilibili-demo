@@ -27,10 +27,6 @@ class BLTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         delegate = self
         var vcs = [UIViewController]()
 
-        let liveVC = LiveViewController()
-        liveVC.tabBarItem.title = "直播"
-        vcs.append(liveVC)
-
         let feedVC = FeedViewController()
         feedVC.tabBarItem.title = "推荐"
         vcs.append(feedVC)
@@ -51,6 +47,10 @@ class BLTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         fav.tabBarItem.title = "收藏"
         vcs.append(fav)
 
+        let liveVC = LiveViewController()
+        liveVC.tabBarItem.title = "直播"
+        vcs.append(liveVC)
+        
         let persionVC = PersonalViewController.create()
         persionVC.extendedLayoutIncludesOpaqueBars = true
         persionVC.tabBarItem.title = "我的"
