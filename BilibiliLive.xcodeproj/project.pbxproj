@@ -371,7 +371,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/BilibiliLive/Vendor",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.etan.tv.BilibiliLive;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iAugus.tv.bilibili;
 				PRODUCT_NAME = Bilibili;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -402,7 +402,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/BilibiliLive/Vendor",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.etan.tv.BilibiliLive;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iAugus.tv.bilibili;
 				PRODUCT_NAME = Bilibili;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
