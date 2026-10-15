@@ -16,13 +16,19 @@ import MarqueeLabel
 import SnapKit
 import TVUIKit
 
+private struct PageRange {
+    let startIndex: Int
+    let endIndex: Int
+
+    var title: String {
+        "\(startIndex + 1) - \(endIndex + 1)"
+    }
+}
+
 class VideoDetailViewController: UIViewController {
-    private var loadingView = UIActivityIndicatorView()
     @IBOutlet var backgroundImageView: UIImageView!
     @IBOutlet var effectContainerView: UIVisualEffectView!
-
     @IBOutlet var titleLabel: UILabel!
-
     @IBOutlet var upButton: BLCustomTextButton!
     @IBOutlet var followButton: BLCustomButton!
     @IBOutlet var coverImageView: UIImageView!
@@ -31,7 +37,6 @@ class VideoDetailViewController: UIViewController {
     @IBOutlet var coinButton: BLCustomButton!
     @IBOutlet var noteView: NoteDetailView!
     @IBOutlet var dislikeButton: BLCustomButton!
-
     @IBOutlet var actionButtonSpaceView: UIView!
     @IBOutlet var durationLabel: UILabel!
     @IBOutlet var playCountLabel: UILabel!
@@ -46,15 +51,35 @@ class VideoDetailViewController: UIViewController {
     @IBOutlet var replysCollectionView: UICollectionView!
     @IBOutlet var repliesCollectionViewHeightConstraints: NSLayoutConstraint!
     @IBOutlet var ugcCollectionView: UICollectionView!
-
     @IBOutlet var pageView: UIView!
-
     @IBOutlet var ugcLabel: UILabel!
     @IBOutlet var ugcView: UIView!
+
+    private var loadingView = UIActivityIndicatorView()
+
+    private var pageCollectionViewTopToTitleConstraint: Constraint?
+    private var pageCollectionViewTopToRangeConstraint: Constraint?
+    private let pageRangeSize = 20
+    private var pageRanges = [PageRange]()
+    private lazy var pageRangeCollectionView: UICollectionView = {
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: makePageRangeCollectionViewLayout())
+        collectionView.register(BLTextOnlyCollectionViewCell.self, forCellWithReuseIdentifier: String(describing: BLTextOnlyCollectionViewCell.self))
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        collectionView.backgroundColor = .clear
+        collectionView.clipsToBounds = false
+        collectionView.isHidden = true
+        return collectionView
+    }()
+
     private var epid = 0
     private var seasonId = 0
     private var aid = 0
     private var cid = 0
+    private var lastPlayCid: Int?
+    private var lastPlayTitle: String?
+    private var playTimeInSecond: Int?
+    private var subType: Int?
     private var data: VideoDetail?
     @IBOutlet var scrollView: UIScrollView!
     private var didSentCoins = 0 {
@@ -97,10 +122,11 @@ class VideoDetailViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        Task { await fetchData() }
 
         pageCollectionView.register(BLTextOnlyCollectionViewCell.self, forCellWithReuseIdentifier: String(describing: BLTextOnlyCollectionViewCell.self))
         pageCollectionView.collectionViewLayout = makePageCollectionViewLayout()
+        pageCollectionView.clipsToBounds = false
+        setupPageRangeCollectionView()
         recommandCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         ugcCollectionView.register(RelatedVideoCell.self, forCellWithReuseIdentifier: String(describing: RelatedVideoCell.self))
         recommandCollectionView.collectionViewLayout = makeRelatedVideoCollectionViewLayout()
@@ -135,10 +161,76 @@ class VideoDetailViewController: UIViewController {
             self?.repliesCollectionViewHeightConstraints.constant = newSize.height
             self?.view.setNeedsLayout()
         }.store(in: &subscriptions)
+
+        Task { await fetchData() }
     }
 
     override var preferredFocusedView: UIView? {
         return playButton
+    }
+
+    private func updatePlayProgressIfNeeded(progress: BangumiInfo.UserStatus.Progress?, episode: BangumiInfo.Episode) {
+        guard let lastEpId = progress?.last_ep_id,
+              let lastTime = progress?.last_time,
+              lastEpId == episode.id
+        else {
+            return
+        }
+        playTimeInSecond = lastTime
+        lastPlayCid = episode.cid
+        lastPlayTitle = episode.title + " " + episode.long_title
+    }
+
+    private func setupPageRangeCollectionView() {
+        let titleLabel = pageView.subviews.compactMap { $0 as? UILabel }.first { $0.text == "视频选集" }!
+
+        pageView.addSubview(pageRangeCollectionView)
+
+        let storyboardTopConstraints = pageView.constraints.filter { constraint in
+            (constraint.firstItem as? UICollectionView) === pageCollectionView && constraint.firstAttribute == .top
+        }
+        storyboardTopConstraints.forEach { $0.isActive = false }
+
+        let storyboardHeightConstraints = (pageView.constraints + pageCollectionView.constraints).filter { constraint in
+            (constraint.firstItem as? UICollectionView) === pageCollectionView && constraint.firstAttribute == .height
+        }
+        storyboardHeightConstraints.forEach { $0.isActive = false }
+
+        pageRangeCollectionView.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview()
+            make.top.equalTo(titleLabel.snp.bottom).offset(30)
+            make.height.equalTo(90)
+        }
+        pageCollectionView.snp.makeConstraints { make in
+            pageCollectionViewTopToTitleConstraint = make.top.equalTo(titleLabel.snp.bottom).offset(30).constraint
+            pageCollectionViewTopToRangeConstraint = make.top.equalTo(pageRangeCollectionView.snp.bottom).offset(30).constraint
+            make.height.equalTo(150)
+        }
+        pageCollectionViewTopToRangeConstraint?.deactivate()
+    }
+
+    private func updatePageRanges() {
+        guard pages.count >= pageRangeSize else {
+            pageRanges = []
+            setPageRangeCollectionViewHidden(true)
+            return
+        }
+
+        pageRanges = stride(from: 0, to: pages.count, by: pageRangeSize).map { startIndex in
+            PageRange(startIndex: startIndex, endIndex: min(startIndex + pageRangeSize, pages.count) - 1)
+        }
+        setPageRangeCollectionViewHidden(false)
+    }
+
+    private func setPageRangeCollectionViewHidden(_ isHidden: Bool) {
+        pageRangeCollectionView.isHidden = isHidden
+        if isHidden {
+            pageCollectionViewTopToRangeConstraint?.deactivate()
+            pageCollectionViewTopToTitleConstraint?.activate()
+        } else {
+            pageCollectionViewTopToTitleConstraint?.deactivate()
+            pageCollectionViewTopToRangeConstraint?.activate()
+        }
     }
 
     private func setupLoading() {
@@ -156,7 +248,7 @@ class VideoDetailViewController: UIViewController {
         } else {
             vc.present(self, animated: false) { [weak self] in
                 guard let self else { return }
-                let player = VideoPlayerViewController(playInfo: PlayInfo(aid: self.aid, cid: self.cid, epid: self.epid, isBangumi: self.isBangumi))
+                let player = VideoPlayerViewController(playInfo: PlayInfo(aid: self.aid, cid: self.cid, epid: self.epid, seasonId: isBangumi ? self.seasonId : nil, lastPlayCid: self.lastPlayCid, playTimeInSecond: self.playTimeInSecond))
                 self.present(player, animated: true)
             }
         }
@@ -178,23 +270,29 @@ class VideoDetailViewController: UIViewController {
         backgroundImageView.alpha = 0
         setupLoading()
         pageView.isHidden = true
+        setPageRangeCollectionViewHidden(true)
         ugcView.isHidden = true
         do {
             if seasonId > 0 {
                 isBangumi = true
                 let info = try await WebRequest.requestBangumiInfo(seasonID: seasonId)
-                if let epi = info.main_section.episodes.first ?? info.section.first?.episodes.first {
+                subType = info.type
+                if let epi = info.episodes.first(where: { $0.id == info.user_status?.progress?.last_ep_id }) ?? info.episodes.first ?? info.section?.first?.episodes.first {
                     aid = epi.aid
                     cid = epi.cid
                     epid = epi.id
+                    updatePlayProgressIfNeeded(progress: info.user_status?.progress, episode: epi)
                 }
-                pages = info.main_section.episodes.map({ VideoPage(cid: $0.cid, page: $0.aid, epid: $0.id, from: "", part: $0.title + " " + $0.long_title) })
+                pages = info.episodes.map({ VideoPage(cid: $0.cid, page: $0.aid, epid: $0.id, from: "", part: $0.title + " " + $0.long_title) })
             } else if epid > 0 {
                 isBangumi = true
                 let info = try await WebRequest.requestBangumiInfo(epid: epid)
-                if let epi = info.episodes.first(where: { $0.id == epid }) ?? info.episodes.first {
+                seasonId = info.season_id
+                subType = info.type
+                if let epi = info.findEpisodeById(epid) ?? info.episodes.first {
                     aid = epi.aid
                     cid = epi.cid
+                    updatePlayProgressIfNeeded(progress: info.user_status?.progress, episode: epi)
                 } else {
                     throw NSError(domain: "get epi fail", code: -1)
                 }
@@ -207,7 +305,23 @@ class VideoDetailViewController: UIViewController {
                 isBangumi = true
                 epid = id
                 let info = try await WebRequest.requestBangumiInfo(epid: epid)
+                seasonId = info.season_id
+                subType = info.type
                 pages = info.episodes.map({ VideoPage(cid: $0.cid, page: $0.aid, epid: $0.id, from: "", part: $0.title + " " + $0.long_title) })
+                if let epi = info.episodes.first(where: { $0.id == epid }) {
+                    updatePlayProgressIfNeeded(progress: info.user_status?.progress, episode: epi)
+                }
+            }
+            if !isBangumi {
+                let playInfo = try await WebRequest.requestPlayerInfo(aid: aid, cid: cid == 0 ? data.View.cid : cid)
+                if cid == 0 {
+                    cid = playInfo.last_play_cid > 0 ? playInfo.last_play_cid : data.View.cid
+                }
+                if playInfo.last_play_cid == cid, let page = data.View.pages?.first(where: { $0.cid == cid }) {
+                    playTimeInSecond = playInfo.playTimeInSecond
+                    lastPlayCid = playInfo.last_play_cid
+                    lastPlayTitle = page.part
+                }
             }
             update(with: data)
         } catch let err {
@@ -296,7 +410,16 @@ class VideoDetailViewController: UIViewController {
         upButton.title = data.ownerName
         followButton.isOn = data.Card.following
 
-        avatarImageView.kf.setImage(with: data.avatar, options: [.processor(DownsamplingImageProcessor(size: CGSize(width: 80, height: 80))), .processor(RoundCornerImageProcessor(radius: .widthFraction(0.5))), .cacheSerializer(FormatIndicatedCacheSerializer.png)])
+        // 更新播放按钮标题
+        if Settings.continuePlay {
+            if let lastPlayCid, lastPlayCid == cid {
+                playButton.title = "继续播放"
+            } else {
+                playButton.title = "播放"
+            }
+        }
+
+        avatarImageView.kf.setImage(with: data.avatar(size: 240), options: [.processor(DownsamplingImageProcessor(size: CGSize(width: 80, height: 80))), .processor(RoundCornerImageProcessor(radius: .widthFraction(0.5))), .cacheSerializer(FormatIndicatedCacheSerializer.png)])
 
         coverImageView.kf.setImage(with: data.pic)
         backgroundImageView.kf.setImage(with: data.pic)
@@ -312,6 +435,8 @@ class VideoDetailViewController: UIViewController {
         if !isBangumi {
             pages = data.View.pages ?? []
         }
+        updatePageRanges()
+        pageRangeCollectionView.reloadData()
         if pages.count > 1 {
             pageCollectionView.reloadData()
             pageView.isHidden = false
@@ -363,13 +488,18 @@ class VideoDetailViewController: UIViewController {
     }
 
     @IBAction func actionPlay(_ sender: Any) {
-        let player = VideoPlayerViewController(playInfo: PlayInfo(aid: aid, cid: cid, epid: epid, isBangumi: isBangumi))
+        let player = VideoPlayerViewController(playInfo: PlayInfo(aid: aid, cid: cid, epid: epid, seasonId: seasonId, subType: subType, lastPlayCid: lastPlayCid, playTimeInSecond: playTimeInSecond, title: data?.title))
         player.data = data
         if pages.count > 0, let index = pages.firstIndex(where: { $0.cid == cid }) {
-            let seq = pages.dropFirst(index).map({ PlayInfo(aid: aid, cid: $0.cid, epid: $0.epid, isBangumi: isBangumi) })
+            let seq = pages.map({ PlayInfo(aid: aid, cid: $0.cid, epid: $0.epid, seasonId: seasonId, subType: subType, title: $0.part) })
             if seq.count > 0 {
-                let nextProvider = VideoNextProvider(seq: seq)
-                player.nextProvider = nextProvider
+                player.sequenceProvider = VideoSequenceProvider(seq: seq, currentIndex: index)
+            }
+        }
+        if allUgcEpisodes.count > 0, let index = allUgcEpisodes.firstIndex(where: { $0.cid == cid }) {
+            let seq = allUgcEpisodes.map({ PlayInfo(aid: $0.aid, cid: $0.cid, title: $0.title) })
+            if seq.count > 0 {
+                player.sequenceProvider = VideoSequenceProvider(seq: seq, currentIndex: index)
             }
         }
         present(player, animated: true, completion: nil)
@@ -458,15 +588,17 @@ class VideoDetailViewController: UIViewController {
 extension VideoDetailViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         switch collectionView {
+        case pageRangeCollectionView:
+            let range = pageRanges[indexPath.item]
+            pageCollectionView.scrollToItem(at: IndexPath(item: range.startIndex, section: 0), at: .left, animated: true)
         case pageCollectionView:
             let page = pages[indexPath.item]
-            let player = VideoPlayerViewController(playInfo: PlayInfo(aid: isBangumi ? page.page : aid, cid: page.cid, epid: page.epid, seasonId: isBangumi ? seasonId : nil, isBangumi: isBangumi))
+            let player = VideoPlayerViewController(playInfo: PlayInfo(aid: isBangumi ? page.page : aid, cid: page.cid, epid: page.epid, seasonId: seasonId, subType: subType, lastPlayCid: lastPlayCid, playTimeInSecond: playTimeInSecond, title: page.part))
             player.data = isBangumi ? nil : data
 
-            let seq = pages.dropFirst(indexPath.item).map({ PlayInfo(aid: aid, cid: $0.cid, seasonId: isBangumi ? seasonId : nil, isBangumi: isBangumi) })
+            let seq = pages.map({ PlayInfo(aid: isBangumi ? $0.page : aid, cid: $0.cid, epid: $0.epid, seasonId: seasonId, subType: subType, title: $0.part) })
             if seq.count > 0 {
-                let nextProvider = VideoNextProvider(seq: seq)
-                player.nextProvider = nextProvider
+                player.sequenceProvider = VideoSequenceProvider(seq: seq, currentIndex: indexPath.item)
             }
             present(player, animated: true, completion: nil)
         case replysCollectionView:
@@ -503,6 +635,8 @@ extension VideoDetailViewController: UICollectionViewDelegate {
 extension VideoDetailViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         switch collectionView {
+        case pageRangeCollectionView:
+            return pageRanges.count
         case pageCollectionView:
             return pages.count
         case replysCollectionView:
@@ -518,6 +652,10 @@ extension VideoDetailViewController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         switch collectionView {
+        case pageRangeCollectionView:
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BLTextOnlyCollectionViewCell", for: indexPath) as! BLTextOnlyCollectionViewCell
+            cell.titleLabel.text = pageRanges[indexPath.item].title
+            return cell
         case pageCollectionView:
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BLTextOnlyCollectionViewCell", for: indexPath) as! BLTextOnlyCollectionViewCell
             let page = pages[indexPath.item]
@@ -565,7 +703,22 @@ extension VideoDetailViewController {
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
                                                   heightDimension: .fractionalHeight(1.0))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
-            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.14), heightDimension: .fractionalHeight(1))
+            let groupSize = NSCollectionLayoutSize(widthDimension: .absolute(300), heightDimension: .absolute(150))
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+            let section = NSCollectionLayoutSection(group: group)
+            section.orthogonalScrollingBehavior = .continuous
+            section.interGroupSpacing = 40
+            return section
+        }
+    }
+
+    func makePageRangeCollectionViewLayout() -> UICollectionViewLayout {
+        UICollectionViewCompositionalLayout {
+            _, _ in
+            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
+                                                  heightDimension: .fractionalHeight(1.0))
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+            let groupSize = NSCollectionLayoutSize(widthDimension: .absolute(200), heightDimension: .fractionalHeight(1))
             let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
             let section = NSCollectionLayoutSection(group: group)
             section.orthogonalScrollingBehavior = .continuous

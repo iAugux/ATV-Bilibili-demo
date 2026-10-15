@@ -109,7 +109,7 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
             }
             imageView.kf.setImage(with: pic, options: [.processor(DownsamplingImageProcessor(size: CGSize(width: 360, height: 202))), .cacheOriginalImage])
         }
-        if let avatar = data.avatar {
+        if let avatar = data.avatar(size: 240) {
             avatarView.isHidden = false
             avatarView.kf.setImage(with: avatar, options: [.processor(DownsamplingImageProcessor(size: CGSize(width: 80, height: 80))), .processor(RoundCornerImageProcessor(radius: .widthFraction(0.5))), .cacheSerializer(FormatIndicatedCacheSerializer.png)])
         } else {
